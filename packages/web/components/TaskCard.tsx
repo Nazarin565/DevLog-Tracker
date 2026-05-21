@@ -20,9 +20,10 @@ const STATUS_COLORS: Record<string, string> = {
 interface Props {
   task: Task;
   onDelete: (id: string) => void;
+  isDeleting?: boolean;
 }
 
-export function TaskCard({ task, onDelete }: Props) {
+export function TaskCard({ task, onDelete, isDeleting }: Props) {
   const [expanded, setExpanded] = useState(false);
   const subtasks = task.subtasks ?? [];
 
@@ -46,9 +47,10 @@ export function TaskCard({ task, onDelete }: Props) {
           </Link>
           <button
             onClick={() => onDelete(task.id)}
-            className="text-xs px-2 py-1 border border-red-200 rounded hover:bg-red-50 text-red-600"
+            disabled={isDeleting}
+            className="text-xs px-2 py-1 border border-red-200 rounded hover:bg-red-50 text-red-600 disabled:opacity-50"
           >
-            Delete
+            {isDeleting ? 'Deleting...' : 'Delete'}
           </button>
         </div>
       </div>

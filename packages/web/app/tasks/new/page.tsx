@@ -14,6 +14,7 @@ export default function NewTaskPage() {
       <div className="bg-white border border-gray-200 rounded-lg p-6 max-w-xl">
         <TaskForm
           mode="create"
+          isPending={createTask.isPending}
           onSubmit={async (data) => {
             await createTask.mutateAsync(data);
             router.push('/');

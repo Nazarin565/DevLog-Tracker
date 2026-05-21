@@ -36,7 +36,21 @@ export class MockClient implements LLMClient {
   async complete(prompt: string, opts?: LLMCompleteOptions): Promise<string> {
     const haystack = (opts?.systemPrompt ?? prompt).toLowerCase();
 
-    if (haystack.includes('prioriti')) {
+    if (haystack.includes('prioriti') || haystack.includes('rankedtasks')) {
+      // Extract real task IDs from the prompt so the response references actual tasks
+      const idMatches = prompt.match(/\bid:\s*([a-f0-9-]{36})/g) ?? [];
+      const taskIds = idMatches.map((m) => m.replace(/\bid:\s*/, ''));
+      if (taskIds.length > 0) {
+        return JSON.stringify({
+          rankedTasks: taskIds.map((taskId, i) => ({
+            taskId,
+            reasoning: i === 0
+              ? 'Highest combined score — high priority, currently in progress, or oldest.'
+              : 'Lower combined score based on priority, status, and age.',
+          })),
+          summary: 'Focus on in-progress high-priority work first, then move to older todo items to avoid stale tasks building up.',
+        });
+      }
       return MOCK_RESPONSES['prioritise']!;
     }
 

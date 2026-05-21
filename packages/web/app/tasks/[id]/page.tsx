@@ -43,6 +43,7 @@ export default function TaskDetailPage() {
             <TaskForm
               mode="edit"
               task={task}
+              isPending={updateTask.isPending}
               onSubmit={async (data) => {
                 await updateTask.mutateAsync(data);
                 setEditing(false);
@@ -68,9 +69,10 @@ export default function TaskDetailPage() {
                 </button>
                 <button
                   onClick={handleDelete}
-                  className="px-3 py-1 text-sm border border-red-200 rounded hover:bg-red-50 text-red-600"
+                  disabled={deleteTask.isPending}
+                  className="px-3 py-1 text-sm border border-red-200 rounded hover:bg-red-50 text-red-600 disabled:opacity-50"
                 >
-                  Delete
+                  {deleteTask.isPending ? 'Deleting...' : 'Delete'}
                 </button>
               </div>
             </div>

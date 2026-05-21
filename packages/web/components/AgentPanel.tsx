@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useRunAgent, useCreateSubtasks } from '../hooks/useTasks';
+import { useRunAgent, useCreateSubtasks, useTasks } from '../hooks/useTasks';
 import type { PrioritisationOutput, DecompositionResult, SubtaskProposal } from '@devlog/shared';
 import type { AgentResult } from '../lib/api';
 
@@ -19,14 +19,19 @@ export function AgentPanel({ taskId }: Props) {
 
   const runAgent = useRunAgent<unknown>();
   const createSubtasks = useCreateSubtasks(taskId);
+  const { data: allTasks } = useTasks();
 
   async function handleRun() {
     setResult(null);
-    const input = activeAgent === 'decompose' ? { taskId } : {};
-    const res = await runAgent.mutateAsync({ agentId: activeAgent, input });
-    setResult(res);
-    if (activeAgent === 'prioritise') {
-      qc.invalidateQueries({ queryKey: ['tasks'] });
+    try {
+      const input = activeAgent === 'decompose' ? { taskId } : {};
+      const res = await runAgent.mutateAsync({ agentId: activeAgent, input });
+      setResult(res);
+      if (activeAgent === 'prioritise') {
+        qc.invalidateQueries({ queryKey: ['tasks'] });
+      }
+    } catch {
+      // error is surfaced via runAgent.isError
     }
   }
 
@@ -77,6 +82,7 @@ export function AgentPanel({ taskId }: Props) {
             output={result.output}
             onCreateSubtasks={handleCreateSubtasks}
             isCreating={createSubtasks.isPending}
+            taskTitleMap={Object.fromEntries((allTasks ?? []).map((t) => [t.id, t.title]))}
           />
         </div>
       )}
@@ -110,11 +116,13 @@ function AgentOutput({
   output,
   onCreateSubtasks,
   isCreating,
+  taskTitleMap,
 }: {
   agentId: AgentId;
   output: unknown;
   onCreateSubtasks: (subtasks: SubtaskProposal[]) => void;
   isCreating: boolean;
+  taskTitleMap: Record<string, string>;
 }) {
   if (agentId === 'decompose') {
     const result = output as DecompositionResult;
@@ -171,8 +179,8 @@ function AgentOutput({
               {i + 1}
             </span>
             <span>
-              <span className="font-mono text-xs text-gray-400">{t.taskId}</span>
-              {t.reasoning && <span className="text-gray-600 ml-1">— {t.reasoning}</span>}
+              <span className="font-medium text-gray-800">{taskTitleMap[t.taskId] ?? t.taskId}</span>
+              {t.reasoning && <span className="text-gray-500 ml-1">— {t.reasoning}</span>}
             </span>
           </li>
         ))}

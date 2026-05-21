@@ -4,8 +4,8 @@ import { useState } from 'react';
 import type { Task, CreateTaskInput, UpdateTaskInput, Priority, TaskStatus } from '@devlog/shared';
 
 type Props =
-  | { mode: 'create'; onSubmit: (data: CreateTaskInput) => void; onCancel?: () => void }
-  | { mode: 'edit'; task: Task; onSubmit: (data: UpdateTaskInput) => void; onCancel?: () => void };
+  | { mode: 'create'; onSubmit: (data: CreateTaskInput) => void; onCancel?: () => void; isPending?: boolean }
+  | { mode: 'edit'; task: Task; onSubmit: (data: UpdateTaskInput) => void; onCancel?: () => void; isPending?: boolean };
 
 export function TaskForm(props: Props) {
   const initial =
@@ -95,8 +95,8 @@ export function TaskForm(props: Props) {
             Cancel
           </button>
         )}
-        <button type="submit" className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700">
-          {props.mode === 'create' ? 'Create Task' : 'Save Changes'}
+        <button type="submit" disabled={props.isPending} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
+          {props.isPending ? 'Saving...' : props.mode === 'create' ? 'Create Task' : 'Save Changes'}
         </button>
       </div>
     </form>

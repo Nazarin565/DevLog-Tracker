@@ -89,7 +89,12 @@ function TaskListPage() {
       {tasks && (
         <div className="space-y-3">
           {tasks.map((task) => (
-            <TaskCard key={task.id} task={task} onDelete={handleDelete} />
+            <TaskCard
+              key={task.id}
+              task={task}
+              onDelete={handleDelete}
+              isDeleting={deleteTask.isPending && deleteTask.variables === task.id}
+            />
           ))}
         </div>
       )}
