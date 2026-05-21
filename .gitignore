@@ -27,6 +27,8 @@ npm-debug.log*
 # local project meta (committed separately when ready)
 CLAUDE.md
 README.md
+package-lock.json
+.claude/
 
 # os / editor
 .DS_Store
