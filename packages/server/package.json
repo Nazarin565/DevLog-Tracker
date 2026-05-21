@@ -11,9 +11,11 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@devlog/shared": "*"
+    "@devlog/shared": "*",
+    "better-sqlite3": "^12.10.0"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.10.0",
     "tsx": "^4.19.0",
     "vitest": "^2.1.0"

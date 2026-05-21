@@ -1,6 +1,10 @@
 import http from 'node:http';
+import { getDb } from './db/index.js';
 
 const port = Number(process.env.API_PORT ?? 4000);
+
+// Initialise DB and apply schema on startup
+getDb();
 
 const server = http.createServer((req, res) => {
   if (req.url === '/health') {
