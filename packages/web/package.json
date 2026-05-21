@@ -10,9 +10,13 @@
   },
   "dependencies": {
     "@devlog/shared": "*",
+    "@tailwindcss/postcss": "^4.3.0",
+    "@tanstack/react-query": "^5.100.11",
     "next": "^15.1.0",
+    "postcss": "^8.5.15",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "tailwindcss": "^4.3.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
