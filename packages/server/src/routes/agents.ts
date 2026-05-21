@@ -1,7 +1,5 @@
 import { Router } from 'express';
 
-// Agent registry and implementations are wired in Step 6.
-// This router is registered now so the route contract is in place.
 export function createAgentRouter(): Router {
   const router = Router();
 
