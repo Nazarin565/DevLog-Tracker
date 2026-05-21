@@ -5,15 +5,16 @@ export class AnthropicClient implements LLMClient {
   private client: Anthropic;
   private model: string;
 
-  constructor(apiKey: string, model = 'claude-haiku-4-5-20251001') {
+  constructor(apiKey: string, model?: string) {
     this.client = new Anthropic({ apiKey });
-    this.model = model;
+    this.model = model ?? 'claude-sonnet-4-6';
   }
 
   async complete(prompt: string, opts?: LLMCompleteOptions): Promise<string> {
     const message = await this.client.messages.create({
       model: this.model,
       max_tokens: opts?.maxTokens ?? 1024,
+      ...(opts?.systemPrompt ? { system: opts.systemPrompt } : {}),
       messages: [{ role: 'user', content: prompt }],
     });
 

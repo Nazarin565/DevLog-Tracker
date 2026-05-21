@@ -1,6 +1,7 @@
 export interface LLMCompleteOptions {
   maxTokens?: number;
   temperature?: number;
+  systemPrompt?: string;
 }
 
 export interface LLMClient {
