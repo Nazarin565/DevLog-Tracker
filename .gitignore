@@ -1,0 +1,32 @@
+# dependencies
+node_modules/
+
+# secrets
+.env
+.env.local
+.env.*.local
+
+# database
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# next.js
+.next/
+out/
+
+# build output
+dist/
+*.tsbuildinfo
+
+# logs
+*.log
+npm-debug.log*
+
+# local project meta (committed separately when ready)
+CLAUDE.md
+README.md
+
+# os / editor
+.DS_Store

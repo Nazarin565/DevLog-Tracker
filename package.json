@@ -1,0 +1,26 @@
+{
+  "name": "devlog",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DevLog — task tracker for an engineering team with an agentic AI layer",
+  "engines": {
+    "node": ">=22 <23"
+  },
+  "workspaces": [
+    "packages/shared",
+    "packages/server",
+    "packages/web"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,green \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "npm run dev --workspace @devlog/server",
+    "dev:web": "npm run dev --workspace @devlog/web",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "tsc --build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "typescript": "^5.7.0"
+  }
+}
