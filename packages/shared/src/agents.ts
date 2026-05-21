@@ -3,7 +3,6 @@ import { z } from 'zod';
 // Agent A (prioritisation) — structured LLM output
 export const PrioritisedTaskSchema = z.object({
   taskId: z.string(),
-  rank: z.number().int().positive(),
   reasoning: z.string(),
 });
 

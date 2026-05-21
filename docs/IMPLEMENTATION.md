@@ -112,14 +112,16 @@ Steps are sequential. Do not move to the next step until the current one boots a
 ## Step 5 — server/llm (Provider Abstraction)
 
 **What we do**
-- `LLMClient` interface (e.g. `complete(prompt, opts): Promise<string>` or a structured method).
-- `MockClient` — **deterministic** realistic responses (one scenario per agent, including an "ambiguous task" branch).
-- `AnthropicClient` — real calls via `@anthropic-ai/sdk`.
-- `createLLMClient()` factory selects the implementation based on `LLM_PROVIDER` (`mock` | `anthropic`).
+- `LLMClient` interface: `complete(prompt, opts?: LLMCompleteOptions): Promise<string>`. Options include `maxTokens`, `temperature`, `systemPrompt`.
+- `MockClient` — **deterministic** realistic responses (one scenario per agent, including an "ambiguous task" branch for decomposition).
+- `AnthropicClient` — real calls via `@anthropic-ai/sdk`; supports `systemPrompt` via the `system` field.
+- `createLLMClient()` factory selects implementation based on `LLM_PROVIDER` (`mock` | `anthropic`); model overridable via `LLM_MODEL` env.
+- `prompts.ts` — `SYSTEM_PROMPTS` object with ready-to-use system prompts for each agent (prioritisation, decomposition). Agents import these and pass via `opts.systemPrompt`.
 
 **Why**
 - Allows development and testing without burning tokens; production uses the real LLM **without changing agent code**.
 - Agents depend on the interface, not on a concrete SDK.
+- System prompts in a single file make them easy to iterate on without touching agent logic.
 
 **Best practice**
 - Dependency inversion: agent receives `LLMClient`, does not import Anthropic directly.
@@ -164,8 +166,8 @@ Steps are sequential. Do not move to the next step until the current one boots a
 **What we do**
 1. Fetches active tasks from the repository.
 2. **Deterministic pre-scoring in code:** priority, age (`createdAt`), status (in-progress > todo), staleness.
-3. LLM step: based on scores, produces an ordered plan "what to start with" + explanation for each item.
-4. Returns a ranked list with reasoning.
+3. LLM step: based on scores, produces an ordered list "what to start with" + reasoning per item. Output schema: `{ rankedTasks: [{ taskId, reasoning }], summary }` — rank is implicit by array position.
+4. Returns `AgentResult<PrioritisationOutput>` with the ranked list and a step trace.
 - **Tests (Vitest)** for step 2 — deterministic.
 
 **Why**

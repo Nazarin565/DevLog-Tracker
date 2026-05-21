@@ -53,7 +53,7 @@ Layered structure so agents and HTTP are decoupled:
   - `POST /api/tasks/:id/subtasks` (bulk create from decomposition)
   - `POST /api/agents/:agentId/run` — **single entry point for all agents**
 - `src/agents/` — the core of the project (see below).
-- `src/llm/` — provider abstraction: `LLMClient` interface + `AnthropicClient` + `MockClient`. Selected via `LLM_PROVIDER` env. Mock returns deterministic, realistic responses → UI and agent steps work without a key.
+- `src/llm/` — provider abstraction: `LLMClient` interface + `AnthropicClient` + `MockClient` + `prompts.ts`. Selected via `LLM_PROVIDER` env (`mock` | `anthropic`); model overridable via `LLM_MODEL`. Mock returns deterministic, schema-valid responses → UI and agent steps work without a key.
 - CORS allows the web origin only (env `WEB_ORIGIN`).
 
 ### packages/web (Next.js App Router)
@@ -88,13 +88,13 @@ interface Agent<Input, Output> {
 
 1. Fetches all active tasks from the DB.
 2. **Deterministic pre-scoring in code:** factors are priority, age (`createdAt`), status (in-progress > todo), staleness. Makes the logic transparent and testable.
-3. LLM step: based on scores and context, produces an ordered plan "what to start with today" + a human explanation for each item.
-4. Returns a ranked list with reasoning. Tests cover step 2 deterministically.
+3. LLM step: based on scores and context, produces an ordered list `{ rankedTasks: [{ taskId, reasoning }], summary }` — rank is implicit by array position.
+4. Returns `AgentResult<PrioritisationOutput>` with reasoning trace. Tests cover step 2 deterministically.
 
 ### Agent B — Decomposition (with clarification on ambiguity)
 
 1. Receives a task (title + description).
-2. **Clarity self-assessment step:** if the description is insufficient, returns `needsClarification` + specific questions (instead of junk subtasks).
+2. **Clarity self-assessment step:** if the description is insufficient, returns `{ type: 'clarify', questions: [...] }` instead of junk subtasks.
 3. If clear — generates structured subtasks (Zod-validated output).
 4. Optionally creates subtasks in the DB immediately (`POST /subtasks`) — user confirms in the UI.
 
