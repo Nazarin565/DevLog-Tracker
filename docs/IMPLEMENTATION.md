@@ -181,6 +181,7 @@ Steps are sequential. Do not move to the next step until the current one boots a
 **Best practice**
 - Separate **deterministic** (scoring — code) from **linguistic** (explanations/nuance — LLM). Test the former; let LLM handle the latter.
 - Scoring is a pure function `(tasks, now) => scored[]` → easy to cover with tests for combinations of age/priority/status.
+- **Two-stage LLM output parsing:** first `JSON.parse` in a `try/catch` (catches non-JSON: markdown, plain text, empty string), then `safeParse` with the Zod schema (catches structurally invalid JSON). Each stage throws a distinct error message. Apply this pattern in every agent.
 
 **Anti-patterns to avoid**
 - ❌ One prompt "sort the tasks" → not an agent, no explanation, not deterministic.
