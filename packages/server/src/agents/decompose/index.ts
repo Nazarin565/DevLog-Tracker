@@ -2,8 +2,6 @@ import { DecompositionResultSchema, type DecompositionResult } from '@devlog/sha
 import { SYSTEM_PROMPTS } from '../../llm/index.js';
 import type { Agent, AgentContext, AgentMeta, AgentResult } from '../types.js';
 
-const MIN_DESCRIPTION_LENGTH = 20;
-
 const meta: AgentMeta = {
   id: 'decompose',
   name: 'Task Decomposition',
@@ -26,25 +24,7 @@ export const decomposeAgent: Agent<DecomposeInput, DecompositionResult> = {
     if (!task) throw new Error(`Task '${input.taskId}' not found`);
     steps.push({ label: 'Fetched task', detail: task.title });
 
-    const descriptionIsClear =
-      task.description.trim().length >= MIN_DESCRIPTION_LENGTH;
-
-    if (!descriptionIsClear) {
-      steps.push({ label: 'Description too vague — skipping LLM, returning clarify' });
-      return {
-        output: {
-          type: 'clarify',
-          questions: [
-            'What is the expected outcome or deliverable for this task?',
-            'Are there any technical constraints or dependencies to be aware of?',
-            'What does "done" look like — is there a specific acceptance criterion?',
-          ],
-        },
-        steps,
-      };
-    }
-
-    steps.push({ label: 'Description sufficient — calling LLM' });
+    steps.push({ label: 'Calling LLM' });
 
     const prompt = `Task title: ${task.title}\nDescription: ${task.description}`;
     const raw = await ctx.llm.complete(prompt, { systemPrompt: SYSTEM_PROMPTS.decomposition });

@@ -193,23 +193,25 @@ Steps are sequential. Do not move to the next step until the current one boots a
 ## Step 8 — Agent B: Decomposition
 
 **What we do**
-1. Input: task (title + description).
-2. **Clarity self-assessment step:** if description is insufficient → return `needsClarification` + specific questions.
-3. If clear → generate subtasks, **validated by Zod schema** from shared.
-4. Optionally create subtasks in the DB (via repository) — user confirms in the UI.
-- **Tests** for output parsing and the clarification branch.
+1. Input: `{ taskId }` — agent fetches the task itself from the repository.
+2. Calls LLM with `SYSTEM_PROMPTS.decomposition` for every input — the LLM decides whether the description is sufficient.
+3. LLM returns one of two branches: `{ type: 'subtasks', subtasks: [...] }` or `{ type: 'clarify', questions: [...] }`.
+4. Two-stage parsing: `JSON.parse` in try/catch → `DecompositionResultSchema.safeParse`.
+5. Returns `AgentResult<DecompositionResult>` with step trace.
+- **Tests** for output parsing, both LLM branches, non-JSON error, schema mismatch, and task-not-found.
 
 **Why**
+- Deciding whether a description is "sufficient" is a language judgement — belongs to the LLM, not to a character-count heuristic in code.
 - If the task is ambiguous, the agent must clarify before generating. This is the second decision step → true agenticity.
 - Validated output = no LLM garbage ends up in the DB.
 
 **Best practice**
 - Two explicit result branches: `clarify` (questions) and `subtasks` (result) — type-safe via discriminated union.
 - DB creation is a separate step requiring confirmation, not automatic (agent proposes, human decides).
-- Always parse LLM output via Zod `safeParse` with error handling.
+- Apply the two-stage LLM parsing pattern (see Step 7 best practices).
 
 **Anti-patterns to avoid**
-- ❌ Generate subtasks for any input, even an empty description → garbage output.
+- ❌ Heuristic pre-filter on description length → language judgement in code, not the LLM's job.
 - ❌ Auto-write to DB without confirmation → agent acts behind the user's back.
 - ❌ `JSON.parse` without validation → crash on invalid LLM output.
 

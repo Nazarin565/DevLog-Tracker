@@ -94,8 +94,8 @@ interface Agent<Input, Output> {
 ### Agent B — Decomposition (with clarification on ambiguity)
 
 1. Receives a task (title + description).
-2. **Clarity self-assessment step:** if the description is insufficient, returns `{ type: 'clarify', questions: [...] }` instead of junk subtasks.
-3. If clear — generates structured subtasks (Zod-validated output).
+2. **LLM self-assessment:** the LLM decides whether the description is sufficient — returns `{ type: 'clarify', questions: [...] }` if not, or `{ type: 'subtasks', subtasks: [...] }` if clear. No heuristic pre-filter in code.
+3. Output validated by `DecompositionResultSchema` (discriminated union) before use.
 4. Optionally creates subtasks in the DB immediately (`POST /subtasks`) — user confirms in the UI.
 
 ### Future stubs (not implemented now, but the framework is ready)

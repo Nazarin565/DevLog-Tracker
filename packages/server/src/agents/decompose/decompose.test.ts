@@ -37,18 +37,26 @@ function makeCtx(task: Task | null, llmResponse?: string): AgentContext {
 }
 
 describe('decomposeAgent', () => {
-  it('returns clarify when description is empty', async () => {
-    const ctx = makeCtx(makeTask({ description: '' }));
+  it('returns clarify when description is empty (LLM decides)', async () => {
+    const llmOutput = JSON.stringify({
+      type: 'clarify',
+      questions: ['What is the expected outcome?', 'What does done look like?'],
+    });
+    const ctx = makeCtx(makeTask({ description: '' }), llmOutput);
     const result = await decomposeAgent.run({ taskId: 'task-1' }, ctx);
     expect(result.output.type).toBe('clarify');
-    expect(ctx.llm.complete).not.toHaveBeenCalled();
+    expect(ctx.llm.complete).toHaveBeenCalledOnce();
   });
 
-  it('returns clarify when description is too short', async () => {
-    const ctx = makeCtx(makeTask({ description: 'short' }));
+  it('returns clarify when description is too short (LLM decides)', async () => {
+    const llmOutput = JSON.stringify({
+      type: 'clarify',
+      questions: ['What is the expected outcome?', 'What does done look like?'],
+    });
+    const ctx = makeCtx(makeTask({ description: 'short' }), llmOutput);
     const result = await decomposeAgent.run({ taskId: 'task-1' }, ctx);
     expect(result.output.type).toBe('clarify');
-    expect(ctx.llm.complete).not.toHaveBeenCalled();
+    expect(ctx.llm.complete).toHaveBeenCalledOnce();
   });
 
   it('calls LLM and returns subtasks when description is sufficient', async () => {
