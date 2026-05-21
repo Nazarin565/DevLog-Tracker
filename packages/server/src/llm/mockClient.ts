@@ -33,20 +33,20 @@ const MOCK_RESPONSES: Record<string, string> = {
 };
 
 export class MockClient implements LLMClient {
-  async complete(prompt: string, _opts?: LLMCompleteOptions): Promise<string> {
-    const lower = prompt.toLowerCase();
+  async complete(prompt: string, opts?: LLMCompleteOptions): Promise<string> {
+    const haystack = (opts?.systemPrompt ?? prompt).toLowerCase();
 
-    if (lower.includes('prioriti')) {
+    if (haystack.includes('prioriti')) {
       return MOCK_RESPONSES['prioritise']!;
     }
 
-    if (lower.includes('decompos') || lower.includes('subtask')) {
+    if (haystack.includes('decompos') || haystack.includes('subtask')) {
+      const promptLower = prompt.toLowerCase();
       const isAmbiguous =
-        lower.includes('unclear') ||
-        lower.includes('vague') ||
-        lower.includes('ambiguous') ||
-        !lower.includes('description:') ||
-        lower.match(/description:\s*$/m);
+        promptLower.includes('unclear') ||
+        promptLower.includes('vague') ||
+        promptLower.includes('ambiguous') ||
+        promptLower.match(/description:\s*$/m) != null;
 
       return isAmbiguous
         ? MOCK_RESPONSES['decompose_ambiguous']!

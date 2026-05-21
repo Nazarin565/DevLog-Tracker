@@ -7,6 +7,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { createLLMClient } from './llm/index.js';
 import { registerAgent } from './agents/index.js';
 import { prioritiseAgent } from './agents/prioritise/index.js';
+import { decomposeAgent } from './agents/decompose/index.js';
 
 const port = Number(process.env['API_PORT'] ?? 4000);
 const webOrigin = process.env['WEB_ORIGIN'] ?? 'http://localhost:3000';
@@ -17,6 +18,7 @@ const subtaskRepo = createSubtaskRepository(db);
 const llm = createLLMClient();
 
 registerAgent(prioritiseAgent);
+registerAgent(decomposeAgent);
 
 const app = express();
 
