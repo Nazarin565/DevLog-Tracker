@@ -2,24 +2,25 @@
 
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useRunAgent, useCreateSubtasks, useTasks } from '../hooks/useTasks';
+import { useRunAgent, useCreateSubtasks } from '../hooks/useTasks';
+import { PrioritisationOutputSchema, DecompositionResultSchema } from '@devlog/shared';
 import type { PrioritisationOutput, DecompositionResult, SubtaskProposal } from '@devlog/shared';
 import type { AgentResult } from '../lib/api';
 
 interface Props {
   taskId: string;
+  taskTitleMap: Record<string, string>;
 }
 
 type AgentId = 'prioritise' | 'decompose';
 
-export function AgentPanel({ taskId }: Props) {
+export function AgentPanel({ taskId, taskTitleMap }: Props) {
   const qc = useQueryClient();
   const [activeAgent, setActiveAgent] = useState<AgentId>('decompose');
   const [result, setResult] = useState<AgentResult<unknown> | null>(null);
 
   const runAgent = useRunAgent<unknown>();
   const createSubtasks = useCreateSubtasks(taskId);
-  const { data: allTasks } = useTasks();
 
   async function handleRun() {
     setResult(null);
@@ -82,7 +83,7 @@ export function AgentPanel({ taskId }: Props) {
             output={result.output}
             onCreateSubtasks={handleCreateSubtasks}
             isCreating={createSubtasks.isPending}
-            taskTitleMap={Object.fromEntries((allTasks ?? []).map((t) => [t.id, t.title]))}
+            taskTitleMap={taskTitleMap}
           />
         </div>
       )}
@@ -125,10 +126,11 @@ function AgentOutput({
   taskTitleMap: Record<string, string>;
 }) {
   if (agentId === 'decompose') {
-    const result = output as DecompositionResult;
-    if (!result || typeof (result as DecompositionResult).type !== 'string') {
+    const parsed = DecompositionResultSchema.safeParse(output);
+    if (!parsed.success) {
       return <p className="text-sm text-red-600">Unexpected response from agent.</p>;
     }
+    const result: DecompositionResult = parsed.data;
     if (result.type === 'clarify') {
       return (
         <div>
@@ -164,10 +166,11 @@ function AgentOutput({
     );
   }
 
-  const pResult = output as PrioritisationOutput;
-  if (!pResult || !Array.isArray(pResult.rankedTasks)) {
+  const parsed = PrioritisationOutputSchema.safeParse(output);
+  if (!parsed.success) {
     return <p className="text-sm text-red-600">Unexpected response from agent.</p>;
   }
+  const pResult: PrioritisationOutput = parsed.data;
   return (
     <div>
       <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">Prioritised order</p>
