@@ -91,7 +91,7 @@ function StepTrace({ steps }: { steps: AgentResult<unknown>['steps'] }) {
       <ol className="space-y-1">
         {steps.map((step, i) => (
           <li key={i} className="flex gap-2 text-xs text-gray-700">
-            <span className="w-4 h-4 rounded-full bg-purple-200 text-purple-800 flex items-center justify-center flex-shrink-0 text-[10px] font-bold">
+            <span className="w-4 h-4 rounded-full bg-purple-200 text-purple-800 flex items-center justify-center shrink-0 text-[10px] font-bold">
               {i + 1}
             </span>
             <span>
@@ -167,7 +167,7 @@ function AgentOutput({
       <ol className="space-y-2">
         {pResult.rankedTasks.map((t, i) => (
           <li key={t.taskId} className="flex gap-2 text-sm">
-            <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center flex-shrink-0 text-xs font-bold">
+            <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center shrink-0 text-xs font-bold">
               {i + 1}
             </span>
             <span>

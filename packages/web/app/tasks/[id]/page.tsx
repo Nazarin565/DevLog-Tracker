@@ -59,7 +59,7 @@ export default function TaskDetailPage() {
                   <p className="text-gray-600 mt-2 whitespace-pre-wrap">{task.description}</p>
                 )}
               </div>
-              <div className="flex gap-2 flex-shrink-0">
+              <div className="flex gap-2 shrink-0">
                 <button
                   onClick={() => setEditing(true)}
                   className="px-3 py-1 text-sm border border-gray-200 rounded hover:bg-gray-50"

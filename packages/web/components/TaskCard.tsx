@@ -37,7 +37,7 @@ export function TaskCard({ task, onDelete }: Props) {
             <p className="text-sm text-gray-500 mt-1 line-clamp-2">{task.description}</p>
           )}
         </div>
-        <div className="flex gap-2 flex-shrink-0">
+        <div className="flex gap-2 shrink-0">
           <Link
             href={`/tasks/${task.id}`}
             className="text-xs px-2 py-1 border border-gray-200 rounded hover:bg-gray-50 text-gray-600"
