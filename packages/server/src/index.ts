@@ -1,21 +1,28 @@
-import http from 'node:http';
-import { getDb } from './db/index.js';
+import express from 'express';
+import cors from 'cors';
+import { getDb, createTaskRepository, createSubtaskRepository } from './db/index.js';
+import { createTaskRouter } from './routes/tasks.js';
+import { createAgentRouter } from './routes/agents.js';
+import { errorHandler } from './middleware/errorHandler.js';
 
-const port = Number(process.env.API_PORT ?? 4000);
+const port = Number(process.env['API_PORT'] ?? 4000);
+const webOrigin = process.env['WEB_ORIGIN'] ?? 'http://localhost:3000';
 
-// Initialise DB and apply schema on startup
-getDb();
+const db = getDb();
+const taskRepo = createTaskRepository(db);
+const subtaskRepo = createSubtaskRepository(db);
 
-const server = http.createServer((req, res) => {
-  if (req.url === '/health') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'ok' }));
-    return;
-  }
-  res.writeHead(404, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ error: { message: 'Not found', code: 'not_found' } }));
-});
+const app = express();
 
-server.listen(port, () => {
+app.use(cors({ origin: webOrigin }));
+app.use(express.json());
+
+app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+app.use('/api/tasks', createTaskRouter(taskRepo, subtaskRepo));
+app.use('/api/agents', createAgentRouter());
+
+app.use(errorHandler);
+
+app.listen(port, () => {
   console.log(`[server] listening on http://localhost:${port}`);
 });
