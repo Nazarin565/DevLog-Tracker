@@ -57,8 +57,9 @@ export function useCreateSubtasks(taskId: string) {
   });
 }
 
-export function useRunAgent<T>(agentId: string) {
+export function useRunAgent<T>() {
   return useMutation({
-    mutationFn: (input: unknown) => api.agents.run<T>(agentId, input),
+    mutationFn: ({ agentId, input }: { agentId: string; input: unknown }) =>
+      api.agents.run<T>(agentId, input),
   });
 }

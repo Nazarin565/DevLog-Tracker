@@ -17,13 +17,13 @@ export function AgentPanel({ taskId }: Props) {
   const [activeAgent, setActiveAgent] = useState<AgentId>('decompose');
   const [result, setResult] = useState<AgentResult<unknown> | null>(null);
 
-  const runAgent = useRunAgent<unknown>(activeAgent);
+  const runAgent = useRunAgent<unknown>();
   const createSubtasks = useCreateSubtasks(taskId);
 
   async function handleRun() {
     setResult(null);
     const input = activeAgent === 'decompose' ? { taskId } : {};
-    const res = await runAgent.mutateAsync(input);
+    const res = await runAgent.mutateAsync({ agentId: activeAgent, input });
     setResult(res);
     if (activeAgent === 'prioritise') {
       qc.invalidateQueries({ queryKey: ['tasks'] });
@@ -118,6 +118,9 @@ function AgentOutput({
 }) {
   if (agentId === 'decompose') {
     const result = output as DecompositionResult;
+    if (!result || typeof (result as DecompositionResult).type !== 'string') {
+      return <p className="text-sm text-red-600">Unexpected response from agent.</p>;
+    }
     if (result.type === 'clarify') {
       return (
         <div>
@@ -154,6 +157,9 @@ function AgentOutput({
   }
 
   const pResult = output as PrioritisationOutput;
+  if (!pResult || !Array.isArray(pResult.rankedTasks)) {
+    return <p className="text-sm text-red-600">Unexpected response from agent.</p>;
+  }
   return (
     <div>
       <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">Prioritised order</p>
