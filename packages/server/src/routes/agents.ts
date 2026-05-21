@@ -1,6 +1,12 @@
 import { Router } from 'express';
+import { DecomposeInputSchema, PrioritiseInputSchema } from '@devlog/shared';
 import { getAgent, listAgents } from '../agents/index.js';
 import type { AgentContext } from '../agents/index.js';
+
+const INPUT_SCHEMAS: Record<string, { parse: (v: unknown) => unknown }> = {
+  decompose: DecomposeInputSchema,
+  prioritise: PrioritiseInputSchema,
+};
 
 export function createAgentRouter(ctx: AgentContext): Router {
   const router = Router();
@@ -19,7 +25,10 @@ export function createAgentRouter(ctx: AgentContext): Router {
         return;
       }
 
-      const result = await agent.run(req.body, ctx);
+      const schema = INPUT_SCHEMAS[req.params.agentId];
+      const input = schema ? schema.parse(req.body) : req.body;
+
+      const result = await agent.run(input, ctx);
       res.json(result);
     } catch (err) {
       next(err);

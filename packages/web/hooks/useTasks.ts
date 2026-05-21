@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, type TaskFilters, type AgentResult } from '../lib/api';
-import type { CreateTaskInput, UpdateTaskInput, CreateSubtasksInput } from '@devlog/shared';
+import type { CreateTaskInput, UpdateTaskInput, CreateSubtasksInput, Subtask } from '@devlog/shared';
 
 export function useTasks(filters?: TaskFilters) {
   return useQuery({
@@ -48,7 +48,7 @@ export function useDeleteTask() {
 
 export function useCreateSubtasks(taskId: string) {
   const qc = useQueryClient();
-  return useMutation({
+  return useMutation<Subtask[], Error, CreateSubtasksInput>({
     mutationFn: (data: CreateSubtasksInput) => api.subtasks.create(taskId, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['task', taskId] });

@@ -97,7 +97,7 @@ function StepTrace({ steps }: { steps: AgentResult<unknown>['steps'] }) {
       <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide mb-1">Reasoning trace</p>
       <ol className="space-y-1">
         {steps.map((step, i) => (
-          <li key={i} className="flex gap-2 text-xs text-gray-700">
+          <li key={`${step.label}-${i}`} className="flex gap-2 text-xs text-gray-700">
             <span className="w-4 h-4 rounded-full bg-purple-200 text-purple-800 flex items-center justify-center shrink-0 text-[10px] font-bold">
               {i + 1}
             </span>
@@ -137,7 +137,7 @@ function AgentOutput({
           <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">Clarifying questions</p>
           <ul className="space-y-1">
             {result.questions.map((q, i) => (
-              <li key={i} className="text-sm text-gray-700 flex gap-2">
+              <li key={`q-${i}`} className="text-sm text-gray-700 flex gap-2">
                 <span className="text-amber-500">?</span>{q}
               </li>
             ))}
@@ -150,7 +150,7 @@ function AgentOutput({
         <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-1">Proposed subtasks</p>
         <ul className="space-y-1 mb-3">
           {result.subtasks.map((st, i) => (
-            <li key={i} className="text-sm text-gray-700 flex gap-2">
+            <li key={`st-${i}`} className="text-sm text-gray-700 flex gap-2">
               <span className="text-green-500">•</span>{st.title}
             </li>
           ))}

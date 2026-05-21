@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+// Agent input schemas — validated at the HTTP boundary before reaching agents
+export const DecomposeInputSchema = z.object({ taskId: z.string().min(1) });
+export const PrioritiseInputSchema = z.object({});
+
+export type DecomposeInput = z.infer<typeof DecomposeInputSchema>;
+
 // Agent A (prioritisation) — structured LLM output
 export const PrioritisedTaskSchema = z.object({
   taskId: z.string(),
@@ -14,7 +20,6 @@ export const PrioritisationOutputSchema = z.object({
 // Agent B (decomposition) — two explicit result branches (discriminated union)
 export const SubtaskProposalSchema = z.object({
   title: z.string().min(1),
-  description: z.string().optional(),
 });
 
 export const DecompositionResultSchema = z.discriminatedUnion('type', [

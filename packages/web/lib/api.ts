@@ -1,4 +1,4 @@
-import type { Task, CreateTaskInput, UpdateTaskInput, CreateSubtasksInput } from '@devlog/shared';
+import type { Task, Subtask, CreateTaskInput, UpdateTaskInput, CreateSubtasksInput } from '@devlog/shared';
 
 export interface AgentStep {
   label: string;
@@ -55,8 +55,8 @@ export const api = {
     },
   },
   subtasks: {
-    create(taskId: string, data: CreateSubtasksInput): Promise<Task> {
-      return request<Task>(`/api/tasks/${taskId}/subtasks`, {
+    create(taskId: string, data: CreateSubtasksInput): Promise<Subtask[]> {
+      return request<Subtask[]>(`/api/tasks/${taskId}/subtasks`, {
         method: 'POST',
         body: JSON.stringify(data),
       });

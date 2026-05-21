@@ -68,16 +68,17 @@ export function createTaskRepository(db: Database) {
     if (query.sortBy === 'createdAt') {
       orderBy = `ORDER BY created_at ${dir}`;
     } else {
-      // Default: sort by priority (high → medium → low), then newest first
-      orderBy = `ORDER BY ${PRIORITY_ORDER}, created_at DESC`;
+      orderBy = `ORDER BY ${PRIORITY_ORDER} ${dir}, created_at DESC`;
     }
 
     const rows = db.prepare<unknown[], TaskRow>(
       `SELECT * FROM tasks ${where} ${orderBy}`
     ).all(...params);
 
+    if (rows.length === 0) return [];
+
     const subtaskRows = db.prepare<unknown[], SubtaskRow>(
-      `SELECT * FROM subtasks WHERE task_id IN (${rows.map(() => '?').join(',') || 'NULL'})`
+      `SELECT * FROM subtasks WHERE task_id IN (${rows.map(() => '?').join(',')})`
     ).all(...rows.map((r) => r.id));
 
     const subtasksByTask = new Map<string, Subtask[]>();
