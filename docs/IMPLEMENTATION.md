@@ -165,7 +165,11 @@ Steps are sequential. Do not move to the next step until the current one boots a
 
 **What we do**
 1. Fetches active tasks from the repository.
-2. **Deterministic pre-scoring in code:** priority, age (`createdAt`), status (in-progress > todo), staleness.
+2. **Deterministic pre-scoring in code** (`scoring.ts`): `score = priority_score + status_score + age_score`
+   - **Priority:** high → 30, medium → 15, low → 0.
+   - **Status:** in-progress → +20, todo → 0; done tasks are excluded entirely.
+   - **Age:** linear 0–25 pts over the first 7 days, then capped at 25 — prevents ancient tasks from infinitely outranking fresh high-priority ones.
+   - Result: sorted `ScoredTask[]` descending by score; passed as context to the LLM prompt.
 3. LLM step: based on scores, produces an ordered list "what to start with" + reasoning per item. Output schema: `{ rankedTasks: [{ taskId, reasoning }], summary }` — rank is implicit by array position.
 4. Returns `AgentResult<PrioritisationOutput>` with the ranked list and a step trace.
 - **Tests (Vitest)** for step 2 — deterministic.
