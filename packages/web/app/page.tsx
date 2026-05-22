@@ -5,6 +5,7 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { useTasks, useDeleteTask } from '../hooks/useTasks';
 import { TaskCard } from '../components/TaskCard';
+import { PrioritisePanel } from '../components/PrioritisePanel';
 import type { TaskFilters } from '../lib/api';
 
 function TaskListPage() {
@@ -40,6 +41,10 @@ function TaskListPage() {
         >
           + New Task
         </Link>
+      </div>
+
+      <div className="mb-6">
+        <PrioritisePanel />
       </div>
 
       <div className="flex flex-wrap gap-3 mb-6">

@@ -105,7 +105,7 @@ export function AgentPanel({ taskId, taskTitleMap }: Props) {
   );
 }
 
-function StepTrace({ steps }: { steps: AgentResult<unknown>['steps'] }) {
+export function StepTrace({ steps }: { steps: AgentResult<unknown>['steps'] }) {
   return (
     <div>
       <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide mb-1">Reasoning trace</p>
