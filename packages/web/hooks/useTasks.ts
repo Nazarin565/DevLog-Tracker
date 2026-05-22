@@ -101,9 +101,14 @@ export function useDeleteSubtask(taskId: string) {
   });
 }
 
-export function useRunAgent<T>() {
+export function useRunAgent<T>(taskId?: string) {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ agentId, input }: { agentId: string; input: unknown }) =>
       api.agents.run<T>(agentId, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+      if (taskId) qc.invalidateQueries({ queryKey: ['task', taskId] });
+    },
   });
 }

@@ -20,7 +20,7 @@ export function SubtaskList({ subtasks, taskId }: Props) {
   const deleteSubtask = useDeleteSubtask(taskId);
   const addSubtask = useAddSubtask(taskId);
   const createSubtasks = useCreateSubtasks(taskId);
-  const runAgent = useRunAgent<unknown>();
+  const runAgent = useRunAgent<unknown>(taskId);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -28,6 +28,7 @@ export function SubtaskList({ subtasks, taskId }: Props) {
   const [showAdd, setShowAdd] = useState(false);
   const [proposed, setProposed] = useState<SubtaskProposal[] | null>(null);
   const [clarifyQuestions, setClarifyQuestions] = useState<string[] | null>(null);
+  const [clarifyAnswer, setClarifyAnswer] = useState('');
   const [decomposeError, setDecomposeError] = useState<string | null>(null);
 
   function startEdit(st: Subtask) {
@@ -51,13 +52,13 @@ export function SubtaskList({ subtasks, taskId }: Props) {
     setShowAdd(false);
   }
 
-  async function runDecompose() {
+  async function runDecompose(answers?: string) {
     setProposed(null);
     setClarifyQuestions(null);
     setDecomposeError(null);
 
     try {
-      const res = await runAgent.mutateAsync({ agentId: 'decompose', input: { taskId } });
+      const res = await runAgent.mutateAsync({ agentId: 'decompose', input: { taskId, ...(answers ? { answers } : {}) } });
       const parsed = DecompositionResultSchema.safeParse(res.output);
       if (!parsed.success) {
         setDecomposeError('Unexpected response from agent.');
@@ -65,6 +66,7 @@ export function SubtaskList({ subtasks, taskId }: Props) {
       }
       if (parsed.data.type === 'clarify') {
         setClarifyQuestions(parsed.data.questions);
+        setClarifyAnswer('');
       } else {
         setProposed(parsed.data.subtasks);
       }
@@ -75,6 +77,12 @@ export function SubtaskList({ subtasks, taskId }: Props) {
 
   function handleDecomposeClick() {
     runDecompose();
+  }
+
+  function handleSubmitAnswers() {
+    const trimmed = clarifyAnswer.trim();
+    if (!trimmed) return;
+    runDecompose(trimmed);
   }
 
   async function handleConfirmSubtasks() {
@@ -198,19 +206,35 @@ export function SubtaskList({ subtasks, taskId }: Props) {
       {clarifyQuestions && (
         <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
           <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">Clarifying questions</p>
-          <ul className="space-y-1">
+          <ul className="space-y-1 mb-3">
             {clarifyQuestions.map((q, i) => (
               <li key={`q-${i}`} className="text-sm text-gray-700 flex gap-2">
                 <span className="text-amber-500 shrink-0">?</span>{q}
               </li>
             ))}
           </ul>
-          <button
-            onClick={() => setClarifyQuestions(null)}
-            className="mt-2 text-xs text-gray-400 hover:text-gray-600 cursor-pointer"
-          >
-            Dismiss
-          </button>
+          <textarea
+            value={clarifyAnswer}
+            onChange={(e) => setClarifyAnswer(e.target.value)}
+            placeholder="Answer the questions above…"
+            rows={3}
+            className="w-full text-sm border border-amber-300 rounded px-2 py-1 focus:outline-none focus:border-amber-500 bg-white resize-none"
+          />
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={handleSubmitAnswers}
+              disabled={runAgent.isPending || !clarifyAnswer.trim()}
+              className="text-xs px-3 py-1 bg-amber-500 text-white rounded hover:bg-amber-600 disabled:opacity-50 cursor-pointer"
+            >
+              {runAgent.isPending ? 'Thinking…' : 'Submit answer'}
+            </button>
+            <button
+              onClick={() => { setClarifyQuestions(null); setClarifyAnswer(''); }}
+              className="text-xs px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 text-gray-600 cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
       )}
 

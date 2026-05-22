@@ -138,6 +138,7 @@ function TaskListPage() {
             task={task}
             onDelete={handleDelete}
             isDeleting={deleteTask.isPending && deleteTask.variables === task.id}
+            aiReasoning={isAiSort ? prioritisation?.reasoning?.[task.id] : undefined}
           />
         ))}
       </div>

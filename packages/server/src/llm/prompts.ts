@@ -32,4 +32,18 @@ Rules:
 Output schema (pick one branch):
 { "type": "clarify", "questions": ["<question>", ...] }
 { "type": "subtasks", "subtasks": [{ "title": "<imperative action>" }, ...] }`,
+
+  decompositionWithAnswers: `You are a senior software engineer helping break down a task into concrete subtasks.
+You will receive a task title, description, and the user's answers to clarifying questions.
+
+The user has already answered your questions — you have enough context now. You MUST generate subtasks.
+
+Rules:
+- Always return the "subtasks" branch. Never return "clarify" again.
+- Generate 3-6 actionable subtasks based on the description and the user's answers.
+- Subtask titles must be imperative, concrete actions ("Write migration for X", not "Migration").
+- Respond with valid JSON only. No markdown, no prose outside the JSON.
+
+Output schema:
+{ "type": "subtasks", "subtasks": [{ "title": "<imperative action>" }, ...] }`,
 } as const;

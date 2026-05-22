@@ -277,3 +277,98 @@ Prioritisation result stored client-side in localStorage (Variant C), not in the
 
 - `npm run typecheck` → exit 0
 - `npm test` → 14/14
+
+---
+
+## Step 15 — Real Anthropic API integration + env consolidation + clarify answer flow
+
+**Date:** 2026-05-22
+
+All changes below were made manually in response to bugs discovered during first real-API test run.
+
+### Context
+
+Up to this point the project ran with `LLM_PROVIDER=mock`. This session connected a real Anthropic API key and fixed everything that broke.
+
+### Fix A — dotenv loading on server
+
+**Problem:** `tsx watch src/index.ts` does not load `.env` automatically. `process.env.LLM_PROVIDER` was always `undefined` → fell back to `mock` regardless of what was in `.env`.
+
+**Fix:** Added `dotenv` to `@devlog/server` dependencies. Loaded it as the first import in `packages/server/src/index.ts`:
+
+```ts
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'node:url';
+import { join, dirname } from 'node:path';
+dotenv.config({ path: join(dirname(fileURLToPath(import.meta.url)), '../../../.env') });
+```
+
+Path resolves from `packages/server/src/` three levels up to the monorepo root where `.env` lives.
+
+### Fix B — `API_PORT=` empty string caused server to bind on port 0
+
+**Problem:** `Number("") === 0`, so `process.env['API_PORT'] ?? 4000` gave `0` when the variable was present but empty. Server started on a random OS-assigned port, not 4000.
+
+**Fix:** Changed `??` to `||` for both `API_PORT` and `WEB_ORIGIN`:
+
+```ts
+const port = Number(process.env['API_PORT'] || 4000);
+const webOrigin = process.env['WEB_ORIGIN'] || 'http://localhost:3000';
+```
+
+`||` correctly falls back on empty string; `??` only catches `null`/`undefined`.
+
+### Fix C — NEXT_PUBLIC_API_URL not reaching Next.js
+
+**Problem:** `packages/web/.env.local` (gitignored) provided `NEXT_PUBLIC_API_URL` to Next.js. New developers wouldn't have this file. The variable was empty in the root `.env`, so `process.env.NEXT_PUBLIC_API_URL` resolved to `""` on the client. `"" ?? 'http://localhost:4000'` gave `""`, and `fetch("")` resolved to a relative URL → requests hit Next.js at `:3000/api/tasks` instead of Express at `:4000`.
+
+**Fix:**
+- Added `dotenv` to `@devlog/web`. Updated `packages/web/next.config.mjs` to load the root `.env` and inject `NEXT_PUBLIC_API_URL` via the `env` key.
+- Changed fallback in `lib/api.ts` from `??` to `||`.
+- Deleted `packages/web/.env.local` and `packages/server/.env` — all env config now in root `.env`.
+- Updated `.env.example`: `[optional]` annotations with defaults; `NEXT_PUBLIC_API_URL=http://localhost:4000` set as default so `cp .env.example .env` produces a working config.
+
+### Fix D — LLM wrapping output in markdown code fences
+
+**Problem:** Real Claude models sometimes wrap JSON in ` ```json ... ``` ` despite the system prompt saying "Respond with valid JSON only." `JSON.parse()` threw, causing a 500.
+
+**Fix:** Added a strip step before `JSON.parse` in both agents:
+
+```ts
+const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+```
+
+Applied to both `prioritise/index.ts` and `decompose/index.ts`.
+
+### Fix E — Clarify `answers` silently stripped by Zod
+
+**Problem:** `answers` field was added to `DecomposeInputSchema` in `src/` but `packages/shared/dist/` was stale. Zod's `.parse()` strips unknown fields → `answers` never reached the agent.
+
+**Fix:** Rebuilt `@devlog/shared` (`npm run build --workspace @devlog/shared`).
+
+### Fix F — LLM kept asking clarifying questions after answers were provided
+
+**Problem:** After the user submitted answers, the agent used the same system prompt that allows `type: "clarify"`. The model produced another round of questions.
+
+**Fix:** Added `decompositionWithAnswers` prompt in `packages/server/src/llm/prompts.ts` that explicitly forbids the clarify branch ("You MUST generate subtasks. Never return 'clarify' again."). The agent selects the prompt based on whether `input.answers` is present.
+
+### Fix G — Task description updated with user answers
+
+**Behaviour added:** When the user provides clarifying answers, the agent appends them to the task's `description` in the DB before calling the LLM:
+
+```ts
+const appended = `${task.description}\n\n_AI added context:_ ${input.answers}`;
+ctx.taskRepo.update(input.taskId, { description: appended });
+```
+
+UI reflects the change immediately via query invalidation.
+
+### Fix H — `useRunAgent` didn't invalidate queries
+
+**Problem:** After any agent run, the task list and detail page showed stale data.
+
+**Fix:** Added `onSuccess` to `useRunAgent` — invalidates `['tasks']` and `['task', taskId]` on success. Hook now accepts optional `taskId`. `SubtaskList` passes `taskId` when instantiating the hook.
+
+### Env consolidation summary
+
+Before: three separate env files in three locations. After: one root `.env`. Developer onboarding: `cp .env.example .env` → fill `ANTHROPIC_API_KEY` if needed → `npm run dev`.

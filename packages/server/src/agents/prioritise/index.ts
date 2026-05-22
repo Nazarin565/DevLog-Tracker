@@ -38,9 +38,11 @@ export const prioritiseAgent: Agent<Record<string, never>, PrioritisationOutput>
     const raw = await ctx.llm.complete(prompt, { systemPrompt: SYSTEM_PROMPTS.prioritisation });
     steps.push({ label: 'LLM ranked tasks' });
 
+    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+
     let parsedJson: unknown;
     try {
-      parsedJson = JSON.parse(raw);
+      parsedJson = JSON.parse(cleaned);
     } catch {
       throw new Error(`LLM returned non-JSON output: ${raw.slice(0, 200)}`);
     }

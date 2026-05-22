@@ -1,7 +1,10 @@
 import { z } from 'zod';
 
 // Agent input schemas — validated at the HTTP boundary before reaching agents
-export const DecomposeInputSchema = z.object({ taskId: z.string().min(1) });
+export const DecomposeInputSchema = z.object({
+  taskId: z.string().min(1),
+  answers: z.string().optional(),
+});
 export const PrioritiseInputSchema = z.object({});
 
 export type DecomposeInput = z.infer<typeof DecomposeInputSchema>;

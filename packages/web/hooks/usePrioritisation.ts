@@ -10,6 +10,7 @@ const QK = ['prioritisation-result'] as const;
 
 export type StoredPrioritisation = {
   rankedIds: string[];
+  reasoning: Record<string, string>;
   summary: string | undefined;
   savedAt: string;
 };
@@ -48,6 +49,7 @@ export function useRunPrioritisation() {
     const output: PrioritisationOutput = parsed.data;
     const stored: StoredPrioritisation = {
       rankedIds: output.rankedTasks.map((t) => t.taskId),
+      reasoning: Object.fromEntries(output.rankedTasks.filter((t) => t.reasoning).map((t) => [t.taskId, t.reasoning!])),
       summary: output.summary,
       savedAt: new Date().toISOString(),
     };

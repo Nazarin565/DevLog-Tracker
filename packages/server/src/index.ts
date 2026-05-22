@@ -1,3 +1,7 @@
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'node:url';
+import { join, dirname } from 'node:path';
+dotenv.config({ path: join(dirname(fileURLToPath(import.meta.url)), '../../../.env') });
 import express from 'express';
 import cors from 'cors';
 import { getDb, createTaskRepository, createSubtaskRepository } from './db/index.js';
@@ -9,8 +13,8 @@ import { registerAgent } from './agents/index.js';
 import { prioritiseAgent } from './agents/prioritise/index.js';
 import { decomposeAgent } from './agents/decompose/index.js';
 
-const port = Number(process.env['API_PORT'] ?? 4000);
-const webOrigin = process.env['WEB_ORIGIN'] ?? 'http://localhost:3000';
+const port = Number(process.env['API_PORT'] || 4000);
+const webOrigin = process.env['WEB_ORIGIN'] || 'http://localhost:3000';
 
 const db = getDb();
 const taskRepo = createTaskRepository(db);

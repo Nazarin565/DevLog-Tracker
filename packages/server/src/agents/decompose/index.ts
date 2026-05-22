@@ -11,6 +11,7 @@ const meta: AgentMeta = {
 
 interface DecomposeInput {
   taskId: string;
+  answers?: string;
 }
 
 export const decomposeAgent: Agent<DecomposeInput, DecompositionResult> = {
@@ -24,14 +25,27 @@ export const decomposeAgent: Agent<DecomposeInput, DecompositionResult> = {
     if (!task) throw new Error(`Task '${input.taskId}' not found`);
     steps.push({ label: 'Fetched task', detail: task.title });
 
+    if (input.answers) {
+      const appended = `${task.description}\n\n_AI added context:_ ${input.answers}`;
+      ctx.taskRepo.update(input.taskId, { description: appended });
+      steps.push({ label: 'Updated task description with user answers' });
+    }
+
     steps.push({ label: 'Calling LLM' });
 
-    const prompt = `Task title: ${task.title}\nDescription: ${task.description}`;
-    const raw = await ctx.llm.complete(prompt, { systemPrompt: SYSTEM_PROMPTS.decomposition });
+    const updatedTask = ctx.taskRepo.findById(input.taskId)!;
+    const prompt = [
+      `Task title: ${updatedTask.title}`,
+      `Description: ${updatedTask.description}`,
+    ].join('\n');
+    const systemPrompt = input.answers ? SYSTEM_PROMPTS.decompositionWithAnswers : SYSTEM_PROMPTS.decomposition;
+    const raw = await ctx.llm.complete(prompt, { systemPrompt });
+
+    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
 
     let parsedJson: unknown;
     try {
-      parsedJson = JSON.parse(raw);
+      parsedJson = JSON.parse(cleaned);
     } catch {
       throw new Error(`LLM returned non-JSON output: ${raw.slice(0, 200)}`);
     }

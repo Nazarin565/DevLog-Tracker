@@ -21,10 +21,12 @@ interface Props {
   task: Task;
   onDelete: (id: string) => void;
   isDeleting?: boolean;
+  aiReasoning?: string;
 }
 
-export function TaskCard({ task, onDelete, isDeleting }: Props) {
+export function TaskCard({ task, onDelete, isDeleting, aiReasoning }: Props) {
   const [expanded, setExpanded] = useState(false);
+  const [reasoningOpen, setReasoningOpen] = useState(false);
   const subtasks = task.subtasks ?? [];
 
   return (
@@ -74,6 +76,21 @@ export function TaskCard({ task, onDelete, isDeleting }: Props) {
           </button>
         )}
       </div>
+
+      {aiReasoning && (
+        <div className="mt-2">
+          <button
+            onClick={() => setReasoningOpen((v) => !v)}
+            className="text-xs text-purple-500 hover:text-purple-700 cursor-pointer flex items-center gap-1"
+          >
+            <span>✦</span>
+            <span>{reasoningOpen ? 'Hide AI reasoning' : 'See AI reasoning'}</span>
+          </button>
+          {reasoningOpen && (
+            <p className="mt-1 text-xs text-gray-500 italic">{aiReasoning}</p>
+          )}
+        </div>
+      )}
 
       {expanded && <SubtaskList subtasks={subtasks} taskId={task.id} />}
     </div>
