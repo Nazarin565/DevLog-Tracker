@@ -1,8 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Subtask } from '@devlog/shared';
-import { useToggleSubtask, useUpdateSubtask, useDeleteSubtask, useAddSubtask } from '../hooks/useTasks';
+import { DecompositionResultSchema } from '@devlog/shared';
+import type { SubtaskProposal } from '@devlog/shared';
+import { useToggleSubtask, useUpdateSubtask, useDeleteSubtask, useAddSubtask, useCreateSubtasks, useRunAgent } from '../hooks/useTasks';
+import { api } from '../lib/api';
 
 interface Props {
   subtasks: Subtask[];
@@ -10,15 +14,21 @@ interface Props {
 }
 
 export function SubtaskList({ subtasks, taskId }: Props) {
+  const qc = useQueryClient();
   const toggle = useToggleSubtask(taskId);
   const updateSubtask = useUpdateSubtask(taskId);
   const deleteSubtask = useDeleteSubtask(taskId);
   const addSubtask = useAddSubtask(taskId);
+  const createSubtasks = useCreateSubtasks(taskId);
+  const runAgent = useRunAgent<unknown>();
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [addTitle, setAddTitle] = useState('');
   const [showAdd, setShowAdd] = useState(false);
+  const [proposed, setProposed] = useState<SubtaskProposal[] | null>(null);
+  const [clarifyQuestions, setClarifyQuestions] = useState<string[] | null>(null);
+  const [decomposeError, setDecomposeError] = useState<string | null>(null);
 
   function startEdit(st: Subtask) {
     setEditingId(st.id);
@@ -39,6 +49,39 @@ export function SubtaskList({ subtasks, taskId }: Props) {
     await addSubtask.mutateAsync(trimmed);
     setAddTitle('');
     setShowAdd(false);
+  }
+
+  async function runDecompose() {
+    setProposed(null);
+    setClarifyQuestions(null);
+    setDecomposeError(null);
+
+    try {
+      const res = await runAgent.mutateAsync({ agentId: 'decompose', input: { taskId } });
+      const parsed = DecompositionResultSchema.safeParse(res.output);
+      if (!parsed.success) {
+        setDecomposeError('Unexpected response from agent.');
+        return;
+      }
+      if (parsed.data.type === 'clarify') {
+        setClarifyQuestions(parsed.data.questions);
+      } else {
+        setProposed(parsed.data.subtasks);
+      }
+    } catch {
+      setDecomposeError((runAgent.error as Error | null)?.message ?? 'Agent error.');
+    }
+  }
+
+  function handleDecomposeClick() {
+    runDecompose();
+  }
+
+  async function handleConfirmSubtasks() {
+    if (!proposed) return;
+    await Promise.all(subtasks.map((s) => api.subtasks.remove(taskId, s.id)));
+    await createSubtasks.mutateAsync({ subtasks: proposed });
+    setProposed(null);
   }
 
   return (
@@ -101,40 +144,107 @@ export function SubtaskList({ subtasks, taskId }: Props) {
         </ul>
       )}
 
-      {showAdd ? (
-        <div className="flex items-center gap-2 mt-2">
-          <input
-            autoFocus
-            value={addTitle}
-            onChange={(e) => setAddTitle(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleAdd();
-              if (e.key === 'Escape') { setShowAdd(false); setAddTitle(''); }
-            }}
-            placeholder="Subtask title…"
-            className="flex-1 text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
-          />
+      <div className="mt-3 space-y-2">
+        {showAdd ? (
+          <div className="flex items-center gap-2">
+            <input
+              autoFocus
+              value={addTitle}
+              onChange={(e) => setAddTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleAdd();
+                if (e.key === 'Escape') { setShowAdd(false); setAddTitle(''); }
+              }}
+              placeholder="Subtask title…"
+              className="flex-1 text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
+            />
+            <button
+              onClick={handleAdd}
+              disabled={addSubtask.isPending || !addTitle.trim()}
+              className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 cursor-pointer"
+            >
+              Add
+            </button>
+            <button
+              onClick={() => { setShowAdd(false); setAddTitle(''); }}
+              className="text-xs px-2 py-1 border border-gray-300 rounded hover:bg-gray-50 text-gray-600 cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
           <button
-            onClick={handleAdd}
-            disabled={addSubtask.isPending || !addTitle.trim()}
-            className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+            onClick={() => setShowAdd(true)}
+            className="text-xs text-blue-500 hover:text-blue-700 cursor-pointer"
           >
-            Add
+            + Add subtask
           </button>
+        )}
+
+        <button
+          onClick={handleDecomposeClick}
+          disabled={runAgent.isPending}
+          className="w-full px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2"
+        >
+          <span className="text-base leading-none">✦</span>
+          <span>{runAgent.isPending ? 'Decomposing…' : 'Decompose task'}</span>
+        </button>
+      </div>
+
+      {decomposeError && (
+        <p className="mt-2 text-xs text-red-600">{decomposeError}</p>
+      )}
+
+      {clarifyQuestions && (
+        <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">Clarifying questions</p>
+          <ul className="space-y-1">
+            {clarifyQuestions.map((q, i) => (
+              <li key={`q-${i}`} className="text-sm text-gray-700 flex gap-2">
+                <span className="text-amber-500 shrink-0">?</span>{q}
+              </li>
+            ))}
+          </ul>
           <button
-            onClick={() => { setShowAdd(false); setAddTitle(''); }}
-            className="text-xs px-2 py-1 border border-gray-300 rounded hover:bg-gray-50 text-gray-600"
+            onClick={() => setClarifyQuestions(null)}
+            className="mt-2 text-xs text-gray-400 hover:text-gray-600 cursor-pointer"
           >
-            Cancel
+            Dismiss
           </button>
         </div>
-      ) : (
-        <button
-          onClick={() => setShowAdd(true)}
-          className="mt-2 text-xs text-blue-500 hover:text-blue-700 cursor-pointer"
-        >
-          + Add subtask
-        </button>
+      )}
+
+      {proposed && (
+        <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+          <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide mb-2">Proposed subtasks</p>
+          <ul className="space-y-1 mb-3">
+            {proposed.map((st, i) => (
+              <li key={`st-${i}`} className="text-sm text-gray-700 flex gap-2">
+                <span className="text-purple-400 shrink-0">•</span>{st.title}
+              </li>
+            ))}
+          </ul>
+          {subtasks.length > 0 && (
+            <p className="text-xs text-amber-600 mb-2">
+              ⚠ Saving will replace your {subtasks.length} existing subtask{subtasks.length !== 1 ? 's' : ''}.
+            </p>
+          )}
+          <div className="flex gap-2">
+            <button
+              onClick={handleConfirmSubtasks}
+              disabled={createSubtasks.isPending}
+              className="text-xs px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 cursor-pointer"
+            >
+              {createSubtasks.isPending ? 'Saving…' : 'Save subtasks'}
+            </button>
+            <button
+              onClick={() => setProposed(null)}
+              className="text-xs px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 text-gray-600 cursor-pointer"
+            >
+              Discard
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

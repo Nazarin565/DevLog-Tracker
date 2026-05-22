@@ -3,10 +3,9 @@
 import { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { useTask, useUpdateTask, useDeleteTask, useTasks } from '../../../hooks/useTasks';
+import { useTask, useUpdateTask, useDeleteTask } from '../../../hooks/useTasks';
 import { TaskForm } from '../../../components/TaskForm';
 import { SubtaskList } from '../../../components/SubtaskList';
-import { AgentPanel } from '../../../components/AgentPanel';
 
 export default function TaskDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -14,7 +13,6 @@ export default function TaskDetailPage() {
   const [editing, setEditing] = useState(false);
 
   const { data: task, isLoading, isError } = useTask(id);
-  const { data: allTasks } = useTasks();
   const updateTask = useUpdateTask(id);
   const deleteTask = useDeleteTask();
 
@@ -94,7 +92,6 @@ export default function TaskDetailPage() {
         <SubtaskList subtasks={subtasks} taskId={id} />
       </div>
 
-      <AgentPanel taskId={id} taskTitleMap={Object.fromEntries((allTasks ?? []).map((t) => [t.id, t.title]))} />
     </div>
   );
 }

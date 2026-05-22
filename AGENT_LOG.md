@@ -220,3 +220,60 @@ All changes below were made manually. No agent generation involved.
 
 - `npm run typecheck` → exit 0
 - `npm test` → 14/14
+
+---
+
+## Step 14 — AI features redesign: Decompose in SubtaskList + Prioritise on home page
+
+**Date:** 2026-05-22
+
+All changes below were made manually. No agent generation involved.
+
+### Context
+
+Two AI features existed previously but were architecturally misplaced: Decompose and Prioritise both lived inside `AgentPanel` on the task detail page. This step relocates them to where they belong UX-wise and makes both interactions self-contained.
+
+### Decompose — moved into SubtaskList
+
+**Problem:** Decompose was a tab inside `AgentPanel`, a separate purple block below the subtask list. It was visually disconnected from the subtasks it produces.
+
+**What was changed:**
+
+- `components/SubtaskList.tsx` — added full decompose flow directly inside the subtask list:
+  - A full-width `✦ Decompose task` button (purple, `rounded-lg`) sits below `+ Add subtask` as a separate row.
+  - Clicking runs the decompose agent (`useRunAgent`, `agentId: 'decompose'`). Button text changes to "Decomposing…" (disabled) while pending.
+  - If existing subtasks are present, the button runs the agent immediately — no blocking confirm dialog. Instead, after the agent returns proposed subtasks, a small warning line appears between the list and Save: `⚠ Saving will replace your N existing subtask(s).`
+  - If the agent returns `type: 'clarify'` — shows an amber block with clarifying questions and a Dismiss button.
+  - If the agent returns `type: 'subtasks'` — shows a purple block "Proposed subtasks" with the list, the warning (if applicable), and two buttons: "Save subtasks" / "Discard".
+  - **Save subtasks** — first deletes all existing subtasks (`api.subtasks.remove` in parallel), then calls `createSubtasks`. Old subtasks are only deleted at save time, not before. If the user clicks Discard or navigates away, old subtasks are untouched.
+  - Zod `DecompositionResultSchema.safeParse` used on the agent output — consistent with the project invariant.
+- `components/AgentPanel.tsx` — **deleted**. No longer needed.
+- `app/tasks/[id]/page.tsx` — removed `AgentPanel` import and render, removed `useTasks` / `allTasks` that were only used to build `taskTitleMap` for the panel.
+
+### Prioritise — moved to home page with localStorage persistence
+
+**Problem:** Prioritise was also inside `AgentPanel` on the detail page — wrong place for a feature that ranks all tasks globally.
+
+**What was changed:**
+
+- `hooks/usePrioritisation.ts` — new hook file:
+  - `usePrioritisationResult()` — reads `StoredPrioritisation` (`{ rankedIds, summary, savedAt }`) from `localStorage` key `devlog:prioritisation` via a TanStack Query query (`queryKey: ['prioritisation-result']`, `staleTime: Infinity`). Survives page reload.
+  - `useRunPrioritisation()` — runs the prioritise agent, validates output with `PrioritisationOutputSchema.safeParse`, stores result to localStorage and updates QC cache via `setQueryData`. Throws on parse failure.
+  - `useClearPrioritisation()` — removes localStorage entry and sets QC cache to `null`.
+- `components/PrioritisePanel.tsx` — rewritten as `PrioritiseButton`: a single compact `✦ AI Prioritise` button in the page header. Shows "Prioritising…" when pending.
+- `app/page.tsx` — full redesign of the home page AI integration:
+  - `PrioritiseButton` sits in the top-right header row alongside `+ New Task`.
+  - After a successful run, a `✦ AI` pill appears in the Sort filter row (purple, alongside Priority / Date pills).
+  - Clicking `✦ AI` sets `sortBy=ai` in the URL. The task list is then sorted client-side: tasks are reordered by `rankedIds` index from the stored result; tasks not in the ranked list fall to the end.
+  - While `sortBy=ai` is active, the Order (asc/desc) control is hidden (AI order is fixed).
+  - Below the filter row, a status line shows: "Sorted by AI · {date} — {summary}" with an ✕ button that clears the result from localStorage + QC cache and resets `sortBy` to `createdAt`.
+  - The `✦ AI` pill only appears if a stored result exists — first run required.
+
+### Architectural decision: localStorage vs server
+
+Prioritisation result stored client-side in localStorage (Variant C), not in the database (Variant D). Rationale: this is a single-user local tool; localStorage survives reloads and requires no schema changes. Variant D (server persistence) was discussed and noted as the production-appropriate choice for a multi-user deployment.
+
+### Result
+
+- `npm run typecheck` → exit 0
+- `npm test` → 14/14
