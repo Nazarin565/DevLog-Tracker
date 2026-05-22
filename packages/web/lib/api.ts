@@ -1,4 +1,4 @@
-import type { Task, Subtask, CreateTaskInput, UpdateTaskInput, CreateSubtasksInput } from '@devlog/shared';
+import type { Task, Subtask, CreateTaskInput, UpdateTaskInput, CreateSubtasksInput, UpdateSubtaskInput } from '@devlog/shared';
 
 export interface AgentStep {
   label: string;
@@ -61,11 +61,26 @@ export const api = {
         body: JSON.stringify(data),
       });
     },
+    createOne(taskId: string, title: string): Promise<Subtask> {
+      return request<Subtask>(`/api/tasks/${taskId}/subtasks/single`, {
+        method: 'POST',
+        body: JSON.stringify({ title }),
+      });
+    },
+    update(taskId: string, subId: string, data: UpdateSubtaskInput): Promise<Subtask> {
+      return request<Subtask>(`/api/tasks/${taskId}/subtasks/${subId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+    },
     setDone(taskId: string, subId: string, done: boolean): Promise<Subtask> {
       return request<Subtask>(`/api/tasks/${taskId}/subtasks/${subId}`, {
         method: 'PATCH',
         body: JSON.stringify({ done }),
       });
+    },
+    remove(taskId: string, subId: string): Promise<void> {
+      return request<void>(`/api/tasks/${taskId}/subtasks/${subId}`, { method: 'DELETE' });
     },
   },
   agents: {

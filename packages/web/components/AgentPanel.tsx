@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useRunAgent, useCreateSubtasks } from '../hooks/useTasks';
+import { useRunAgent, useCreateSubtasks, useTask } from '../hooks/useTasks';
 import { PrioritisationOutputSchema, DecompositionResultSchema } from '@devlog/shared';
 import type { PrioritisationOutput, DecompositionResult, SubtaskProposal } from '@devlog/shared';
 import type { AgentResult } from '../lib/api';
+import { api } from '../lib/api';
 
 interface Props {
   taskId: string;
@@ -19,10 +20,23 @@ export function AgentPanel({ taskId, taskTitleMap }: Props) {
   const [activeAgent, setActiveAgent] = useState<AgentId>('decompose');
   const [result, setResult] = useState<AgentResult<unknown> | null>(null);
 
+  const { data: task } = useTask(taskId);
   const runAgent = useRunAgent<unknown>();
   const createSubtasks = useCreateSubtasks(taskId);
 
   async function handleRun() {
+    if (activeAgent === 'decompose') {
+      const existing = task?.subtasks ?? [];
+      if (existing.length > 0) {
+        const ok = confirm(
+          `This task already has ${existing.length} subtask${existing.length !== 1 ? 's' : ''}. Running decompose will delete them and replace with new ones. Continue?`
+        );
+        if (!ok) return;
+        await Promise.all(existing.map((s) => api.subtasks.remove(taskId, s.id)));
+        qc.invalidateQueries({ queryKey: ['task', taskId] });
+        qc.invalidateQueries({ queryKey: ['tasks'] });
+      }
+    }
     setResult(null);
     try {
       const input = activeAgent === 'decompose' ? { taskId } : {};

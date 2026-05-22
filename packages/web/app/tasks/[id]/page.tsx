@@ -89,12 +89,10 @@ export default function TaskDetailPage() {
         )}
       </div>
 
-      {subtasks.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h2 className="font-semibold mb-3">Subtasks ({subtasks.length})</h2>
-          <SubtaskList subtasks={subtasks} taskId={id} />
-        </div>
-      )}
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <h2 className="font-semibold mb-3">Subtasks{subtasks.length > 0 ? ` (${subtasks.length})` : ''}</h2>
+        <SubtaskList subtasks={subtasks} taskId={id} />
+      </div>
 
       <AgentPanel taskId={id} taskTitleMap={Object.fromEntries((allTasks ?? []).map((t) => [t.id, t.title]))} />
     </div>

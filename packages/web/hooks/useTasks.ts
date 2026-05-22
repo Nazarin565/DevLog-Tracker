@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, type TaskFilters, type AgentResult } from '../lib/api';
-import type { CreateTaskInput, UpdateTaskInput, CreateSubtasksInput, Subtask } from '@devlog/shared';
+import type { CreateTaskInput, UpdateTaskInput, CreateSubtasksInput, UpdateSubtaskInput, Subtask } from '@devlog/shared';
 
 export function useTasks(filters?: TaskFilters) {
   return useQuery({
@@ -61,6 +61,39 @@ export function useToggleSubtask(taskId: string) {
   const qc = useQueryClient();
   return useMutation<Subtask, Error, { subId: string; done: boolean }>({
     mutationFn: ({ subId, done }) => api.subtasks.setDone(taskId, subId, done),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['task', taskId] });
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
+export function useAddSubtask(taskId: string) {
+  const qc = useQueryClient();
+  return useMutation<Subtask, Error, string>({
+    mutationFn: (title) => api.subtasks.createOne(taskId, title),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['task', taskId] });
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
+export function useUpdateSubtask(taskId: string) {
+  const qc = useQueryClient();
+  return useMutation<Subtask, Error, { subId: string; data: UpdateSubtaskInput }>({
+    mutationFn: ({ subId, data }) => api.subtasks.update(taskId, subId, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['task', taskId] });
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
+export function useDeleteSubtask(taskId: string) {
+  const qc = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: (subId) => api.subtasks.remove(taskId, subId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['task', taskId] });
       qc.invalidateQueries({ queryKey: ['tasks'] });

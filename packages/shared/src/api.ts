@@ -18,6 +18,11 @@ export const CreateSubtasksSchema = z.object({
   subtasks: z.array(z.object({ title: z.string().min(1) })).min(1),
 });
 
+export const UpdateSubtaskSchema = z.object({
+  title: z.string().min(1).optional(),
+  done: z.boolean().optional(),
+});
+
 export const TaskQuerySchema = z.object({
   status: TaskStatusSchema.optional(),
   sortBy: z.enum(['priority', 'createdAt']).optional(),
@@ -27,4 +32,5 @@ export const TaskQuerySchema = z.object({
 export type CreateTaskInput = z.infer<typeof CreateTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof UpdateTaskSchema>;
 export type CreateSubtasksInput = z.infer<typeof CreateSubtasksSchema>;
+export type UpdateSubtaskInput = z.infer<typeof UpdateSubtaskSchema>;
 export type TaskQuery = z.infer<typeof TaskQuerySchema>;

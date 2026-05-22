@@ -179,3 +179,44 @@ Both changes below were identified during the Step 11 runtime audit (Playwright 
 
 - `npm run typecheck` → exit 0
 - `npm test` → 14/14 (no server-side test changes needed; toggle route logic is trivial)
+
+---
+
+## Step 13 — Subtask CRUD + manual add + decompose conflict warning
+
+**Date:** 2026-05-22
+
+All changes below were made manually. No agent generation involved.
+
+### What was added
+
+**Backend (`packages/server`):**
+
+- `subtaskRepository.ts` — refactored `setDone` to delegate to a new generic `update(id, { title?, done? })` method that builds a dynamic `SET` clause. Added `createOne(taskId, title)` for single-subtask inserts. Added `removeAllForTask(taskId)` (used internally by the decompose warning flow). All methods use parameterised SQL — no injection surface.
+- `shared/src/api.ts` — added `UpdateSubtaskSchema = z.object({ title: z.string().min(1).optional(), done: z.boolean().optional() })` and exported `UpdateSubtaskInput` type.
+- `routes/tasks.ts`:
+  - `POST /:id/subtasks/single` — create one subtask manually; validates `title` presence, returns 201 + `Subtask`.
+  - `PATCH /:id/subtasks/:subId` — now uses `UpdateSubtaskSchema.parse(req.body)` (covers both `title` and `done` updates); replaces the previous ad-hoc `typeof done !== 'boolean'` guard.
+  - `DELETE /:id/subtasks/:subId` — delete a single subtask; returns 204 or 404.
+
+**Web (`packages/web`):**
+
+- `lib/api.ts` — added `api.subtasks.createOne(taskId, title)`, `api.subtasks.update(taskId, subId, data)`, `api.subtasks.remove(taskId, subId)`. Existing `setDone` kept for the toggle hook.
+- `hooks/useTasks.ts` — added `useAddSubtask(taskId)`, `useUpdateSubtask(taskId)`, `useDeleteSubtask(taskId)`. All three invalidate `['task', taskId]` and `['tasks']` on success.
+- `components/SubtaskList.tsx` — fully rewritten:
+  - Inline edit: hover a row → pencil icon appears → click → title becomes an `<input>`; commit on Enter or blur, cancel on Escape. Only writes if title actually changed.
+  - Delete: hover a row → ✕ icon appears → click → DELETE request, row removed optimistically via cache invalidation.
+  - Manual add: "+ Add subtask" button at bottom → inline input → Add / Cancel. Enter submits, Escape cancels.
+  - Component now always renders (never returns null), so the subtask section on the detail page is always visible.
+- `app/tasks/[id]/page.tsx` — subtask section is now unconditionally rendered (was guarded by `subtasks.length > 0`). Heading shows count only when `> 0`.
+- `components/AgentPanel.tsx` — before running the decompose agent, checks `task.subtasks.length`. If subtasks exist, shows a `confirm()` dialog warning that they will be replaced. On confirm, deletes all existing subtasks via `api.subtasks.remove` in parallel, invalidates cache, then proceeds with the agent run. On cancel, aborts — no agent call made.
+
+### What was NOT changed
+
+- `TaskCard` expanded view: the expand button is still only shown when `subtasks.length > 0`, so the card list stays clean. The `SubtaskList` inside the card still shows the "Add subtask" input when expanded — intentionally, so users can add from the list view too.
+- No new server-side tests added: `update` and `createOne` are thin wrappers over parameterised SQL, consistent with the existing repo pattern. The `setDone` tests from Step 12 continue to pass via the refactored path.
+
+### Result
+
+- `npm run typecheck` → exit 0
+- `npm test` → 14/14

@@ -3,6 +3,7 @@ import {
   CreateTaskSchema,
   UpdateTaskSchema,
   CreateSubtasksSchema,
+  UpdateSubtaskSchema,
   TaskQuerySchema,
 } from '@devlog/shared';
 import type { TaskRepository } from '../db/taskRepository.js';
@@ -78,17 +79,38 @@ export function createTaskRouter(
     }
   });
 
+  router.post('/:id/subtasks/single', (req, res, next) => {
+    try {
+      if (!taskRepo.findById(req.params.id)) throw new NotFoundError('Task');
+      const { title } = req.body;
+      if (typeof title !== 'string' || title.trim().length === 0) {
+        res.status(400).json({ error: { message: '`title` is required', code: 'validation_error' } });
+        return;
+      }
+      res.status(201).json(subtaskRepo.createOne(req.params.id, title.trim()));
+    } catch (err) {
+      next(err);
+    }
+  });
+
   router.patch('/:id/subtasks/:subId', (req, res, next) => {
     try {
       if (!taskRepo.findById(req.params.id)) throw new NotFoundError('Task');
-      const { done } = req.body;
-      if (typeof done !== 'boolean') {
-        res.status(400).json({ error: { message: '`done` must be a boolean', code: 'validation_error' } });
-        return;
-      }
-      const subtask = subtaskRepo.setDone(req.params.subId, done);
+      const input = UpdateSubtaskSchema.parse(req.body);
+      const subtask = subtaskRepo.update(req.params.subId, input);
       if (!subtask) throw new NotFoundError('Subtask');
       res.json(subtask);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.delete('/:id/subtasks/:subId', (req, res, next) => {
+    try {
+      if (!taskRepo.findById(req.params.id)) throw new NotFoundError('Task');
+      const deleted = subtaskRepo.remove(req.params.subId);
+      if (!deleted) throw new NotFoundError('Subtask');
+      res.status(204).end();
     } catch (err) {
       next(err);
     }
