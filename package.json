@@ -12,7 +12,9 @@
     "packages/web"
   ],
   "scripts": {
+    "predev": "npm run build --workspace @devlog/shared",
     "dev": "concurrently -n server,web -c blue,green \"npm:dev:server\" \"npm:dev:web\"",
+    "predev:server": "npm run build --workspace @devlog/shared",
     "dev:server": "npm run dev --workspace @devlog/server",
     "dev:web": "npm run dev --workspace @devlog/web",
     "build": "npm run build --workspaces --if-present",
