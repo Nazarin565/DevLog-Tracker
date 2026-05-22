@@ -84,3 +84,98 @@ After scaffolding and integration (steps 9–10), a structured senior fullstack 
 
 - `npm run typecheck` → exit 0 (all packages)
 - `npm test` → 14/14 tests pass
+
+---
+
+## Step 11 — Antipatterns, Bottlenecks & Production Risk Audit
+
+**Date:** 2026-05-21
+
+### Context
+
+Full static analysis + golden path runtime verification (Playwright headless Chromium + API smoke tests). Goal: surface anything that could break in production or under realistic load before the project is submitted.
+
+### Static analysis findings
+
+**Not critical for this project's scope, but documented:**
+
+1. **No LLM timeout** — `AnthropicClient.complete()` makes a bare `client.messages.create()` call with no `AbortSignal` or server-side timeout. If the Anthropic API hangs, the Express request hangs indefinitely. For a local single-user tool this is acceptable; in production it would need a `signal: AbortSignal.timeout(30_000)` wrapper.
+
+2. **Agent errors surface as opaque 500** — when the LLM returns non-JSON or fails Zod validation, the agent throws `new Error(...)`. The `errorHandler` catches it and returns `{ error: { message: 'Internal server error', code: 'internal_error' } }` — the real error message is `console.error`'d on the server but hidden from the client. This is correct security behaviour (no LLM output leaked to client), but the UI shows the same "Internal server error" for a network failure, a missing taskId, and a Zod parse failure — no distinction. Acceptable for scope.
+
+3. **No graceful shutdown** — `server.listen(port, ...)` with no `SIGTERM`/`SIGINT` handler. SQLite `better-sqlite3` is synchronous so no in-flight writes are lost on kill, but any pending LLM request would be dropped without a clean error. Low risk for a local tool.
+
+4. **express.json() with no body size limit** — default Express v5 limit is 100 kb. Realistically not a problem for this app's payloads (task descriptions, subtask lists).
+
+5. **No indexes on `status`, `priority`, `created_at`** in SQLite schema. With tens of tasks this is irrelevant; with thousands it would matter. Noted as future-scale concern only.
+
+6. **SQL injection surface is safe** — dynamic `UPDATE tasks SET ${fields.join(', ')}` looks dangerous but is safe: `fields` contains only hardcoded strings (`'title = ?'`, `'status = ?'` etc.), never user input. `sortBy`/`order` query params are constrained by `z.enum` in `TaskQuerySchema` before they reach the repository. No injection vector found.
+
+7. **CORS default is safe** — `WEB_ORIGIN` defaults to `http://localhost:3000`, not `*`. No wildcard CORS.
+
+8. **No secrets in web** — only `NEXT_PUBLIC_API_URL` is exposed to the browser. `ANTHROPIC_API_KEY` is server-only.
+
+### Golden path runtime verification
+
+**API smoke tests (curl against Express :4000):**
+- CREATE task (high priority, clear description) → 201, correct shape ✅
+- PATCH status → in-progress ✅
+- GET by ID ✅
+- LIST filter `status=in-progress` ✅
+- LIST `sortBy=priority&order=asc` → correctly returns low→medium→high (fix #1 verified) ✅
+- AGENT decompose (clear task) → `type=subtasks`, 3 steps in trace ✅
+- AGENT decompose (vague/empty task) → `type=clarify`, 3 questions ✅
+- AGENT decompose missing `taskId` → `validation_error` 400 (fix #2 verified) ✅
+- AGENT prioritise → ranked list + summary ✅
+- POST subtasks → `Subtask[]` (not Task) returned ✅
+- DELETE → 204; GET after → 404 ✅
+- Invalid `status` query param → `validation_error` 400 ✅
+
+**Browser golden path (Playwright headless Chromium, localhost:3000):**
+- Task list renders with filter (status) + sort (Priority/Date) + order (asc/desc) controls ✅
+- Filter `todo` → URL becomes `?status=todo`; sort `Priority` → `?status=todo&sortBy=priority` — URL-state preserved ✅
+- Create task form → fill title/description/priority → submit → redirected to list → task appears ✅
+- Task detail page: title, description, status/priority/createdAt displayed ✅
+- AgentPanel visible with Decompose Task / Prioritise All toggle ✅
+- Run Decompose (clear task) → reasoning trace (3 numbered steps), PROPOSED SUBTASKS section, Create Subtasks button ✅
+- Click Create Subtasks → subtasks written to DB, page shows Subtasks (4) section with checklist ✅
+- Switch to Prioritise All → Run Agent → REASONING TRACE with "Fetched tasks — 11 active task(s)" + ranked list ✅
+
+**One UI observation (not a bug):** The `SubtaskList` renders checkboxes visually but they are not interactive — there is no `onClick` handler since `setDone`/`remove` routes were intentionally not added (documented trade-off in Step 10 fixes). A user might expect to click them. Worth a future UX improvement.
+
+### Result
+
+- All golden path flows work end-to-end ✅
+- All 3 major fixes from Step 10 verified in runtime ✅
+- No blockers, no data loss, no security holes found
+- Risks documented are all acceptable for the project's local single-user scope
+
+---
+
+## Step 12 — Manual UX fixes after runtime audit
+
+**Date:** 2026-05-22
+
+Both changes below were identified during the Step 11 runtime audit (Playwright golden path) and fixed manually. No agent generation involved.
+
+### Fix A — Interactive subtask checkboxes with persistent state
+
+**Problem:** `SubtaskList` rendered checkbox-shaped spans that were purely decorative — no `onClick`, no route behind them. The `done` field existed in the DB and the repository had `setDone`, but there was no HTTP route to reach it. Identified as a conscious scope decision in Step 10, but flagged as a UX issue during runtime: a reviewer clicking the checkboxes would expect them to work.
+
+**What was added:**
+
+- `PATCH /api/tasks/:taskId/subtasks/:subId` route in `packages/server/src/routes/tasks.ts` — validates `done: boolean` in the body, delegates to `subtaskRepo.setDone`, returns the updated `Subtask`. Returns 404 if task or subtask not found.
+- `api.subtasks.setDone(taskId, subId, done)` in `packages/web/lib/api.ts`.
+- `useToggleSubtask(taskId)` mutation hook in `packages/web/hooks/useTasks.ts` — on success invalidates `['task', taskId]` and `['tasks']` so both the detail page and the task list card update.
+- `SubtaskList` rewritten: each row is now a `<label>` wrapping a visually hidden `<input type="checkbox">` and the decorative span. Clicking the label or the span toggles `done`. The `disabled` prop on the input prevents double-toggle while the mutation is in flight. `taskId` added as a required prop; all two call-sites (`TaskCard`, `[id]/page.tsx`) updated.
+
+### Fix B — `cursor: pointer` on filter/sort/order pill buttons
+
+**Problem:** The status / sort / order pill buttons in `app/page.tsx` had no `cursor-pointer` class. In Tailwind v4 `<button>` elements do not get `cursor: pointer` automatically (unlike some browser defaults), so hovering the filter bar showed the default text cursor — no visual affordance that the pills are clickable.
+
+**What was changed:** Added `cursor-pointer` to the `className` of all three button groups (status, sortBy, order) in `packages/web/app/page.tsx`.
+
+### Result
+
+- `npm run typecheck` → exit 0
+- `npm test` → 14/14 (no server-side test changes needed; toggle route logic is trivial)

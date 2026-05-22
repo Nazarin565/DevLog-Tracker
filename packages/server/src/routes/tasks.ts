@@ -78,5 +78,21 @@ export function createTaskRouter(
     }
   });
 
+  router.patch('/:id/subtasks/:subId', (req, res, next) => {
+    try {
+      if (!taskRepo.findById(req.params.id)) throw new NotFoundError('Task');
+      const { done } = req.body;
+      if (typeof done !== 'boolean') {
+        res.status(400).json({ error: { message: '`done` must be a boolean', code: 'validation_error' } });
+        return;
+      }
+      const subtask = subtaskRepo.setDone(req.params.subId, done);
+      if (!subtask) throw new NotFoundError('Subtask');
+      res.json(subtask);
+    } catch (err) {
+      next(err);
+    }
+  });
+
   return router;
 }

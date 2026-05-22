@@ -61,6 +61,12 @@ export const api = {
         body: JSON.stringify(data),
       });
     },
+    setDone(taskId: string, subId: string, done: boolean): Promise<Subtask> {
+      return request<Subtask>(`/api/tasks/${taskId}/subtasks/${subId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ done }),
+      });
+    },
   },
   agents: {
     run<T>(agentId: string, input: unknown): Promise<AgentResult<T>> {

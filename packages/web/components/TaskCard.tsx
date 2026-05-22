@@ -75,7 +75,7 @@ export function TaskCard({ task, onDelete, isDeleting }: Props) {
         )}
       </div>
 
-      {expanded && <SubtaskList subtasks={subtasks} />}
+      {expanded && <SubtaskList subtasks={subtasks} taskId={task.id} />}
     </div>
   );
 }

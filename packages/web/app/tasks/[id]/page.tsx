@@ -92,7 +92,7 @@ export default function TaskDetailPage() {
       {subtasks.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <h2 className="font-semibold mb-3">Subtasks ({subtasks.length})</h2>
-          <SubtaskList subtasks={subtasks} />
+          <SubtaskList subtasks={subtasks} taskId={id} />
         </div>
       )}
 

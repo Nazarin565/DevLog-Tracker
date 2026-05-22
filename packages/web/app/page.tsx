@@ -49,7 +49,7 @@ function TaskListPage() {
             <button
               key={s}
               onClick={() => setParam('status', s)}
-              className={`mr-1 px-3 py-1 text-xs rounded-full border ${status === s ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+              className={`mr-1 px-3 py-1 text-xs rounded-full border cursor-pointer ${status === s ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}
             >
               {s}
             </button>
@@ -61,7 +61,7 @@ function TaskListPage() {
             <button
               key={s}
               onClick={() => setParam('sortBy', s)}
-              className={`mr-1 px-3 py-1 text-xs rounded-full border ${sortBy === s ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+              className={`mr-1 px-3 py-1 text-xs rounded-full border cursor-pointer ${sortBy === s ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}
             >
               {s === 'createdAt' ? 'Date' : 'Priority'}
             </button>
@@ -73,7 +73,7 @@ function TaskListPage() {
             <button
               key={o}
               onClick={() => setParam('order', o)}
-              className={`mr-1 px-3 py-1 text-xs rounded-full border ${order === o ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+              className={`mr-1 px-3 py-1 text-xs rounded-full border cursor-pointer ${order === o ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}
             >
               {o}
             </button>

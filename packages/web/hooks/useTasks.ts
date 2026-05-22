@@ -57,6 +57,17 @@ export function useCreateSubtasks(taskId: string) {
   });
 }
 
+export function useToggleSubtask(taskId: string) {
+  const qc = useQueryClient();
+  return useMutation<Subtask, Error, { subId: string; done: boolean }>({
+    mutationFn: ({ subId, done }) => api.subtasks.setDone(taskId, subId, done),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['task', taskId] });
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
 export function useRunAgent<T>() {
   return useMutation({
     mutationFn: ({ agentId, input }: { agentId: string; input: unknown }) =>
