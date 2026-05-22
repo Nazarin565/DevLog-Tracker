@@ -81,7 +81,7 @@ export function SubtaskList({ subtasks, taskId }: Props) {
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                   <button
                     onClick={() => startEdit(st)}
-                    className="text-xs text-gray-400 hover:text-gray-700 px-1"
+                    className="text-xs text-gray-400 hover:text-gray-700 px-1 cursor-pointer"
                     title="Edit"
                   >
                     ✎
@@ -89,7 +89,7 @@ export function SubtaskList({ subtasks, taskId }: Props) {
                   <button
                     onClick={() => deleteSubtask.mutate(st.id)}
                     disabled={deleteSubtask.isPending}
-                    className="text-xs text-gray-400 hover:text-red-600 px-1 disabled:opacity-50"
+                    className="text-xs text-gray-400 hover:text-red-600 px-1 disabled:opacity-50 cursor-pointer"
                     title="Delete"
                   >
                     ✕
